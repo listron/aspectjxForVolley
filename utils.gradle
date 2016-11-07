@@ -1,0 +1,57 @@
+import org.aspectj.bridge.IMessage
+import org.aspectj.bridge.MessageHandler
+import org.aspectj.tools.ajc.Main
+
+//该文件只是为了配置aspectjtools而存在的，
+buildscript {
+    repositories {
+        jcenter()
+    }
+    dependencies {
+
+        classpath 'org.aspectj:aspectjtools:1.8.+'
+    }
+}
+
+dependencies{
+    compile 'org.aspectj:aspectjrt:1.8.+'
+}
+
+def ajc(String androidbootClassFiles, JavaCompile javaCompile) {
+    String[] args = ["-showWeaveInfo",
+                     "-1.8",
+                     "-inpath", javaCompile.destinationDir.toString(),
+                     "-aspectpath", javaCompile.classpath.asPath,
+                     "-d", javaCompile.destinationDir.toString(),
+                     "-classpath", javaCompile.classpath.asPath,
+                     "-bootclasspath", androidbootClassFiles]
+    println args.toString()
+    MessageHandler handler = new MessageHandler(true);
+    new Main().run(args, handler)
+
+    def log = project.logger
+    for (IMessage message : handler.getMessages(null, true)) {
+        switch (message.getKind()) {
+            case IMessage.ABORT:
+            case IMessage.ERROR:
+            case IMessage.FAIL:
+                log.error message.message, message.thrown
+                throw message.thrown
+                break;
+            case IMessage.WARNING:
+            case IMessage.INFO:
+                log.info message.message, message.thrown
+                break;
+            case IMessage.DEBUG:
+                log.debug message.message, message.thrown
+                break;
+        }
+    }
+}
+
+ext {
+    ajc = this.&ajc
+    if (project.hasProperty('versionName') && project.hasProperty('versionCode') && project.hasProperty('BUILD_NUMBER') && project.hasProperty('developLevel') && project.hasProperty('map_key') && project.hasProperty('umeng_key')) {
+        gradleConfig = [versionName: versionName, versionCode: versionCode, BUILD_NUMBER: BUILD_NUMBER, developLevel: developLevel, map_key: map_key, umeng_key : umeng_key]
+    }
+}
